@@ -1,0 +1,9 @@
+[en]
+  title = "Haoxian's Lab"
+  languageName = "English"
+  weight = 1
+
+[fr]
+  title = "Labo de Haoxian"
+  languageName = "Français"
+  weight = 2
