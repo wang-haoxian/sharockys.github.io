@@ -2,8 +2,12 @@
   title = "Haoxian's Lab"
   languageName = "English"
   weight = 1
+  languagedir = "ltr"
+  contentdir = "content/en"
 
 [fr]
   title = "Labo de Haoxian"
   languageName = "Français"
   weight = 2
+  languagedir = "ltr"
+  contentdir = "content/fr"
