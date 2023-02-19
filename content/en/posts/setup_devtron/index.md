@@ -98,8 +98,10 @@ ports:
       - loadbalancer
  ```
 
- Then use 
+ Then use:
  ```Bash
  k3d cluster create --config devtron_cluster.yaml
  ```
 to create the cluster. 
+
+Explanations 
