@@ -3,7 +3,7 @@
         {
             "language": "markdown",
             "scheme": "file",
-            "pattern": "content/en/posts/setup_devtron.md"
+            "pattern": "content/en/posts/setup_devtron/index.md"
         }
     ]
 }

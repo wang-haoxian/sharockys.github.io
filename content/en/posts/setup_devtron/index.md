@@ -16,14 +16,14 @@ tags:
 - Docker
 ---
 
-# Context
+## Context
 Recently, I am trying to make full use of my i7-12700 CPU and the 96G RAM that I install for it. The ideal thing for me is to be able to practice MLOps on a k8s cluster. However, it's never easy for bare-metal devices to make a whole cluster with many nodes. Maybe with Docker Desktop it will be easy, but then I may lose the chance to learn. 
 
 I have tested microk8s before. However, there are always some weird things that stop me from just getting the basic control plane. This is probably because it was installed with snap. Anyways, I ran into different solutions. Another solution that I have tested is Minikube. Nice and clean but for a single node. I would like to make it more complicated. K3S is a good one and I have installed it on three low-end laptops with my NAS to make a 1 server and 3 agents cluster. It was funny and I succeeded to run some applications on it. Now that I am on a single machine and I want to simulate a multi-node cluster, the ideal way would be to create several VMs and set up the cluster with them which is tedious. To avoid this, some automation tools like Ansible are one of the best choices.  I am not yet ready to get my hands dirty on VMs while my objective is to learn to make things on K8S. K3D is a good alternative based on K3S. 
 
 K3D is a docker version of K3S. It uses docker to simulate nodes and Docker in Docker to run apps on it. 
 
-# Quick start with K3D 
+## Quick start with K3D 
 The installation is as handy as the docker installation script: 
 ```Bash
 wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
@@ -75,3 +75,31 @@ Metrics-server is running at https://0.0.0.0:38483/api/v1/namespaces/kube-system
 
 To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
 ```
+
+## Create cluster with YAML config
+It's also a good idea to use YAML file to create the cluster. This allows us to duplicate the cluster easily and easier for us to recreate the whole environment from disaster. For experimental purposes for Devtron, I will make a 3 nodes cluster with 1 server and 2 agents. The convenient part of K3D is that you can spin up more nodes later quickly. 
+
+The config file is like below: 
+
+```YAML 
+# devtron_cluster.yaml
+apiVersion: k3d.io/v1alpha4
+kind: Simple
+metadata:
+  name: cluster
+servers: 1
+agents: 2
+ports:
+  - port: 8082:30000
+    nodeFilters:
+      - loadbalancer
+  - port: 30080-30100:30080-30100
+    nodeFilters:
+      - loadbalancer
+ ```
+
+ Then use 
+ ```Bash
+ k3d cluster create --config devtron_cluster.yaml
+ ```
+to create the cluster. 
