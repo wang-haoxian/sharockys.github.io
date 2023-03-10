@@ -33,7 +33,7 @@ For more os-specific installation methods, please check https://helm.sh/docs/int
 
 1. installation with helm
 ```shell
-helm install devtron devtron/devtron-operator --create-namespace --namespace devtroncd --set components.devtron.service.type=NodePort --set components.devtron.service.nodePort=30000
+helm install devtron devtron/devtron-operator --create-namespace --namespace devtroncd --set components.devtron.service.type=NodePort --set components.devtron.service.nodePort=30080
 ```
 
 2. Run the following command to get the admin password 
@@ -81,14 +81,14 @@ spec:
   ipFamilyPolicy: SingleStack
   ports:
   - name: devtron
-		nodePort: 32267 30080
+		nodePort: 32267  # change it to -> 30080 or the port you choose for devtron when creating the cluster 
     port: 80
     protocol: TCP
     targetPort: devtron
   selector:
     app: devtron
   sessionAffinity: None
-  type: LoadBalancer NodePort
+  type: LoadBalancer # Change this to -> NodePort so that it expose directly to load balancer of k3d
 		status:
 		  loadBalancer:
 		    ingress:
@@ -97,3 +97,12 @@ spec:
 		    - ip: 172.31.0.4
 ```
 
+Then following the hint to get your admin password with 
+```shell
+kubectl -n devtroncd get secret devtron-secret -o jsonpath='{.data.ADMIN_PASSWORD}' | base64 -d
+``` 
+And you will be fine to visit `http://localhost:{THE_PORT_YOU_CHOSE_FOR_MAPPING_30080}`. 
+If you used the same as the previous article, the URL will be http://localhost:8082
+
+References 
+https://devtron.ai/blog/k3d-for-local-kubernetes-development/ 
