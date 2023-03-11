@@ -1,6 +1,6 @@
 ---
 author: "Haoxian WANG"
-title: "Setup Devtron with K3D"
+title: "[K8S] Setup Devtron with K3D"
 date: 2023-02-21T11:00:06+09:00
 description: "Quick notes for my K3D cluster setup - Devtron part"
 draft: false
@@ -12,6 +12,7 @@ authorEmoji: 👻
 tags: 
 - K3D
 - Devtron
+- K8S
 - Kubernetes 
 - Docker
 ---
@@ -104,5 +105,5 @@ kubectl -n devtroncd get secret devtron-secret -o jsonpath='{.data.ADMIN_PASSWOR
 And you will be fine to visit `http://localhost:{THE_PORT_YOU_CHOSE_FOR_MAPPING_30080}`. 
 If you used the same as the previous article, the URL will be http://localhost:8082
 
-References 
+## References 
 https://devtron.ai/blog/k3d-for-local-kubernetes-development/ 

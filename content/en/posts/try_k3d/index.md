@@ -1,6 +1,6 @@
 ---
 author: "Haoxian WANG"
-title: "Setup K3D"
+title: "[K8S] Setup K3D"
 date: 2023-02-18T13:00:06+09:00
 description: "Quick notes for my K3D cluster setup"
 draft: false
@@ -11,6 +11,7 @@ author: Haoxian
 authorEmoji: 👻
 tags: 
 - K3D
+- K8S
 - Kubernetes 
 - Docker
 ---
@@ -195,5 +196,5 @@ options:
 Now you have a running K3D cluster on your machine. 
 In the next post, I will show you how to install devtron for CI/CD and so on. 
 
-References:
+## References
 https://k3d.io/v5.4.7/ 
