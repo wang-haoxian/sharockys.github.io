@@ -2,7 +2,7 @@
 author: "Haoxian WANG"
 title: "[K8S] Use MetalLB as K3S Load Balancer"
 date: 2023-03-19T11:00:06+09:00
-description: "Deploy the MetalLB for K3S cluster"
+description: "Setup MetalLB for K3S cluster"
 draft: false
 hideToc: false
 enableToc: true
@@ -18,7 +18,7 @@ tags:
 - MetalLB
 ---
 
-# LoadBalancer in K3S with MetalLB
+## LoadBalancer and load balancer - They are not the same thing!
 
 The terms LoadBalancer and load balancer are often used interchangeably, but they can have different meanings depending on the context.
 
@@ -28,7 +28,7 @@ A LoadBalancer, on the other hand, is a specific type of load balancer that is u
 
 So, while a load balancer can refer to any device or software that distributes network traffic, a LoadBalancer specifically refers to a service in Kubernetes that provides external access to a set of pods in a deployment.
 
-# LoadBalancer in K3S with MetalLB
+## LoadBalancer in K3S with MetalLB
 
 K3S is a lightweight Kubernetes distribution designed for use in resource-constrained environments. One of the features of Kubernetes that K3S supports is the LoadBalancer service. This allows traffic to be distributed across multiple pods in a deployment, providing high availability and fault tolerance.
 
@@ -54,6 +54,15 @@ In both modes, MetalLB can be configured to use a specific IP address range for 
 
 To choose between Layer 2 and BGP mode in MetalLB, you need to consider your specific network environment and requirements. If you have access to BGP and want a more scalable and flexible solution, BGP mode may be the better choice. If BGP is not available or you prefer a simpler solution, Layer 2 mode may be the better choice.
 
+
+## What did MetalLB actually do?
+MetalLB assigns an IP address to a LoadBalancer service from the address range that you specify. This IP address is then used to access the service. 
+Then it broadcasts the IP address of the LoadBalancer service to the local network using ARP (Yep, just yelling to everyone in the same network).   
+This allows traffic to be correctly routed to the service, providing high availability and fault tolerance for your applications.   
+
+With MetalLB, instead of using NodePort, or Ingress which onkly works with HTTP/HTTPS traffic, you can use LoadBalancer service to expose your application to the outside world, thus making the effect of cloud-provisioned Load Balancer.
+
+
 ## How to set up MetalLB in K3S
 
 It’s easy to setup MetalLB. Historically we use helm, but now it’s recommended to use Manifest: 
@@ -66,130 +75,73 @@ To install MetalLB using a manifest in K3S, follow these steps:
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.9/config/manifests/metallb-native.yaml
 ```
 
+
+2. Create a IP pool  and apply it.   
+  Basically the `addresses` will be a list of IPs that are available from your home router/ your DHCP server. 
+
 ```YAML
----
-apiVersion: v1
-kind: Namespace
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
 metadata:
-  name: metallb-system
-  labels:
-    app: metallb
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
+  name: first-pool
   namespace: metallb-system
-  name: config
-data:
-  config: |
-    address-pools:
-    - name: default
-      protocol: layer2
-      addresses:
-      - 192.168.1.240-192.168.1.250 
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  namespace: metallb-system
-  name: controller
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: metallb
-      component: controller
-  template:
-    metadata:
-      labels:
-        app: metallb
-        component: controller
-    spec:
-      containers:
-      - name: controller
-        image: metallb/controller:v0.10.2
-        imagePullPolicy: IfNotPresent
-        args:
-        - --port=7472
-        - --config=config
-        volumeMounts:
-        - name: config
-          mountPath: /config
-      volumes:
-      - name: config
-        configMap:
-          name: config
-          optional: true
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  namespace: metallb-system
-  name: controller
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: metallb-system:controller
-rules:
-- apiGroups: [""]
-  resources: ["services"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources: ["endpoints"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["extensions"]
-  resources: ["ingresses"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: metallb-system:controller
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: metallb-system:controller
-subjects:
-- kind: ServiceAccount
-  name: controller
-  namespace: metallb-system
-
+  addresses:
+  - 192.168.88.176-192.168.88.180
 ```
-
-1. Modify the `addresses` field in the `config` section to specify the IP address range that MetalLB should use for LoadBalancer services. If you use the official manifest, you can create a config alongside and apply it
-
-```YAML
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  namespace: metallb-system
-  name: config
-data:
-  config: |
-    address-pools:
-    - name: my-pool
-      protocol: layer2
-      addresses:
-      - 192.168.1.240-192.168.1.250 
-```
-
-1. Apply the manifest using the `kubectl apply` command:
-
+ Apply the manifest using the `kubectl apply` command:
 ```Shell
 kubectl apply -f metallb.yaml
-
 ```
+
 
 This will create a new namespace named `metallb-system` and deploy the MetalLB controller and speaker as Kubernetes objects within that namespace. Once the controller and speaker are running, you can create LoadBalancer services in K3S and MetalLB will automatically assign an IP address from the specified IP address range.
 
 Note that you may need to modify your network configuration to allow traffic to be routed to the LoadBalancer IP address. This may involve configuring NAT or firewall rules on your network router or gateway.
 
+3. Advertise your IP pool  with Layer2 mode
+Layer 2 advertisement is used in MetalLB to announce the IP address of the LoadBalancer service to the local network using ARP.   
+This is necessary in Layer 2 mode, which is used when BGP is not available or not desired.   
+By announcing the IP address of the LoadBalancer service to the local network, MetalLB ensures that traffic is correctly routed to the service, providing high availability and fault tolerance for your applications.
+```YAML 
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: first-pool-advertisement
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  - first-pool
+```
+
+
+Now you can create LoadBalancer services in K3S and MetalLB will automatically assign an IP address from the specified IP address range.
+Let's try our example with guestbook app. If you didn't see the example, you can find it here: [](../guest_book/index.md)
+This time we will use the `LoadBalancer` service type.   
+```YAML
+kind: Service
+apiVersion: v1
+metadata:
+  name: guestbook
+  namespace: guestbook
+  labels:
+    app: guestbook
+spec:
+  ports:
+  - port: 80
+    targetPort: http-server
+  selector:
+    app: guestbook
+  type: LoadBalancer
+```
+Then we will see an IP is assigned to our service by MetalLB.   
+![](metallb-screen-guestbook.png)
+
+
 ## References
 
-[https://metallb.universe.tf/installation/](https://metallb.universe.tf/installation/)
+1. [https://metallb.universe.tf/installation/](https://metallb.universe.tf/installation/)
 
-[https://www.reddit.com/r/homelab/comments/mvjc0f/metallb_and_traefik_for_a_home_kubernetes_cluster/](https://www.reddit.com/r/homelab/comments/mvjc0f/metallb_and_traefik_for_a_home_kubernetes_cluster/)
+2. [https://www.reddit.com/r/homelab/comments/mvjc0f/metallb_and_traefik_for_a_home_kubernetes_cluster/](https://www.reddit.com/r/homelab/comments/mvjc0f/metallb_and_traefik_for_a_home_kubernetes_cluster/)
+
+3. https://opensource.com/article/20/7/homelab-metallb 
