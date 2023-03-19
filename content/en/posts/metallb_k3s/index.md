@@ -116,7 +116,7 @@ spec:
 
 
 Now you can create LoadBalancer services in K3S and MetalLB will automatically assign an IP address from the specified IP address range.
-Let's try our example with guestbook app. If you didn't see the example, you can find it here: [](../guest_book/index.md)
+Let's try our example with guestbook app. If you didn't see the example, you can find it here: [Deploy guestbook example in K3D](../guest_book)
 This time we will use the `LoadBalancer` service type.   
 ```YAML
 kind: Service
