@@ -5,7 +5,9 @@ type = "about"
 date = "2023-02-16"
 +++
 
-I'm a passionate technology enthusiast who enjoys leveraging established and emerging technologies to create robust systems. Whether building at work or tinkering on personal projects, such as my Homelab and SmartHome, I'm driven by a desire to innovate and create. I'm dedicated to continuous learning and growth, both personally and professionally, and am always seeking new challenges to overcome.
+I'm a passionate technology enthusiast who enjoys leveraging established and emerging technologies to create robust systems.   
+Whether building at work or tinkering on personal projects, such as my Homelab and SmartHome, I'm driven by a desire to innovate and create.   
+I'm dedicated to continuous learning and growth, both personally and professionally, and am always seeking new challenges to overcome.  
 
 ## About my Homelab 
 ### Machines 
