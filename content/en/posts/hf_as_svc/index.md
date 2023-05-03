@@ -22,7 +22,7 @@ tags:
 - MLOps
 ---
 
-# [ML] Huggingface Pipeline as a Service 
+## Huggingface Pipeline as a Service 
 I am currently working on some projects using Huggingface Transformers. I found it is a little bit tedious to set up a web server for each model. So I decided to write a script to automate the process.  
 There is a great documentation on Huggingface website about how to set up a web server for a model using Scarlette. Here is the link: [pipeline_webserver](https://huggingface.co/docs/transformers/main/en/pipeline_webserver)  
 

@@ -198,3 +198,7 @@ In the next post, I will show you how to install devtron for CI/CD and so on.
 
 ## References
 https://k3d.io/v5.4.7/ 
+
+
+## Notes 
+I finally moved to K3S because I got more machines and I wanted to have a real cluster.
