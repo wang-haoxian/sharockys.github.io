@@ -1,18 +1,18 @@
 [[main]]
   identifier = "about"
-  name = "about"
+  name = "About"
   url = "about"
   weight = 1
 
 [[main]]
   identifier = "archive"
-  name = "archive"
+  name = "Archive"
   url = "archive"
   weight = 2    
 
 [[main]]
   identifier = "posts"
-  name = "posts"
+  name = "Posts"
   url = "posts"
   weight = 4
     

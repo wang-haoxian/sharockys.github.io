@@ -19,8 +19,8 @@ tags:
 - Minio
 ---
 
-# [K8S] S3 with Minio on K8S
 
+## Context
 I wanted to test DVC, but it would be better to have a S3-compatible server as storage backend for DVC. I chose Minio because I am kind of with it. 
 
 I set up Minio Operator at the very beginning and then found out it’s a little bit overkill for my use case since it can devour a lot of resources. Then I switched to Minio object storage on K8S which is more suitable for Homelab and learning purpose. For production purposes, it is recommended to use the Minio Operator.
@@ -28,11 +28,10 @@ I set up Minio Operator at the very beginning and then found out it’s a little
 Minio is an object storage server that is compatible with Amazon S3 APIs. It is designed to be simple, lightweight, and easy to set up. 
 
 To use Minio on K8S, you will need to deploy the Minio server as a pod. This can be done using the Kubernetes deployment object. Once the pod is running, you can access the Minio server using the service object.
-
+## Deployment
 To deploy the Minio server, you will need to create a Kubernetes deployment object using the Minio Docker image. You can then expose the deployment as a service using a Kubernetes service object. The service object will allow you to access the Minio server using a stable IP address via the previous mentioned MetalLB with LoadBalancer or NodePort. 
 
-To set up Minio object storage on Kubernetes, you can follow these steps:
-
+### Creation of a persistent volume
 To create a persistent volume with filesystem mode in Kubernetes, you can use the following example YAML file:
 
 ```YAML
@@ -69,6 +68,8 @@ kubectl apply -f minio-pv.yaml
 
 Replace `your-pv-file.yaml` with the path to your persistent volume YAML file. Once the persistent volume is created, you can use its name in the persistent volume claim YAML file to request storage from the persistent volume.
 
+### Creation of a persistent volume claim
+
 ```YAML
 kind: PersistentVolumeClaim
 apiVersion: v1
@@ -94,34 +95,7 @@ This file will create a persistent volume claim with a storage request of 20 gig
 kubectl apply -f minio-pvc.yaml
 
 ```
-
-Replace `your-pvc-file.yaml` with the path to your persistent volume claim YAML file. Once the persistent volume claim is created, you can use its name in the Minio deployment YAML file to mount the volume to the container.
-
-To create a persistent volume claim (PVC) in Kubernetes, you can use the following example YAML file:
-
-```YAML
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: minio-pvc
-	namespace: minio
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
-```
-
-This file will create a PVC with a storage request of 1 gigabyte. You can adjust the storage request as needed. Once you have created the PVC YAML file, you can apply it to your Kubernetes cluster using the `kubectl apply` command:
-
-```Shell
-kubectl apply -f minio-pvc.yaml
-
-```
-
-Replace `your-pvc-file.yaml` with the path to your PVC YAML file. Once the PVC is created, you can use its name in the Minio deployment YAML file to mount the volume to the container.
-
+### Deploy Minio server
 ```YAML
 apiVersion: apps/v1
 kind: Deployment
@@ -180,6 +154,7 @@ spec:
   externalTrafficPolicy: Local
 ```
 
+### Use MC to access resources on Minio server
 Assuming that you have set up Minio server and created a bucket, you can use the `mc` command-line tool to connect to the bucket. First, download and install the `mc` tool from the official website: [https://docs.min.io/docs/minio-client-complete-guide.html](https://docs.min.io/docs/minio-client-complete-guide.html)
 
 Once you have installed `mc`, you can use the following command to configure it to connect to your Minio server:
