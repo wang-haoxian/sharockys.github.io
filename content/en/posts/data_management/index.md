@@ -47,17 +47,17 @@ When the dataset is big enough, it's hard to manage the data. Thus we need to ma
 ## What are the requirements for data management in MLOps?
 I am not here to talk about using very advanced tools like Delta Lake or Apache Iceberg. They have some fancy features like time travel. But for a small team or a small project, they are too heavy and the cost may be too high. So I will focus on the principles of data management in MLOps by taking some ideas from data engineering. 
 From my personal experiences, the requirements for data management in MLOps are:
-  - Traceability: We need to know where the data comes from, and how the data is processed.
-  - Reproducibility: We need to be able to reproduce the data.
-  - Versioning: We need to be able to manage the versions of the data.
-  - Scalability: We need to be able to manage the data when the data is big enough.
-  - Flexibility: We need to be able to manage the data when the data is changing.
-  - Cost: We need to be able to manage the data with a reasonable cost.
-  - Performance: We need to be able to manage the data with good performance.
-  - Simplicity: We need to be able to manage the data with simplicity.
-  - Automation: We need to be able to manage the data with automation.
-  - Collaboration: We need to be able to manage the data with collaboration.
-  - Security: We need to be able to manage the data with security.
+  - Traceability: We need to know where the data comes from, and how the data is processed. The metadata of the data should be managed.
+  - Reproducibility: We need to be able to reproduce the data with certain procedures in case we delete the data temporarily.
+  - Versioning: Data should be managed with versions, and we need to be able to access the data with different versions. 
+  - Scalability: The ability to manage the data in a scalable way with business growth.
+  - Flexibility: The possibility of changing the processing of the data. 
+  - Cost: The cost should be reasonable for the business.
+  - Performance: There are data requires cocurrent read/write, and we need to manage the data with performance.
+  - Simplicity: New members should be able to understand the data management and tools easily.
+  - Automation: The pipeline should be able to run automatically with as less as possible human intervention, just like a CI/CD pipeline.
+  - Collaboration: The management process should allow multiple people to work on the same data. 
+  - Security: We need to define the scope of access control for different people.
 
 This is not an exhaustive list, but it's a good start. 
 I separate these requirements into three groups: 
@@ -74,17 +74,17 @@ These three requirements together means we are able to understand at each step w
 What we need for these three requirements are basically a set of informations to describe the runs of the pipeline.
 
 ### Scalability, Flexibility, Cost, Performance
-These four elements together force us to think about the most efficient way to manage the data. 
-How to manage the data when the data is big enough?
-How to manage the data with the changing business requirements?
-How to manage the data with a reasonable cost?
-We need to find out the solution to make a balance between these four elements. It's easy to use a huge Google BigQuery to manage the data at a very scalable and performant way, at the price of potentially sacrificing the flexibility and it may be too expensive. It's also easy to allocate unlimited size of bucket storage in AWS S3, but it may be too expensive and we may lose some performance. Some advanced modern data warehouses like Snowflake may be a good choice, but it add too much overhead for a small team or a small project. 
-All I want to say it's that there are no silver bullet, and we need to find out the best solution for our own case. Sometimes git-lfs is our best friend, sometimes it's not. Sometimes a simple S3 bucket will be nice. And in many cases DVC could be cool at some point. 
+These four elements together force us to think about the most efficient way to manage the data. Sevceral questions we need to ask ourselves are:
+- How to manage the data when the data is big enough?
+- How to manage the data with the changing business requirements?
+- How to manage the data with a reasonable cost?
+We need to find out the solution to make a balance between these four elements. It's easy to use a huge Google BigQuery to manage the data at a very scalable and performant way, at the price of potentially sacrificing the flexibility and it may be too expensive. It's also easy to allocate unlimited size of bucket storage in AWS S3, but it may be too expensive and we may lose some performance. Some advanced modern data warehouses like Snowflake may be a good choice, but it add too much overhead for a small team or a small project.   
+All I want to say it's that there are no silver bullet, and we need to find out the best solution for our own case. Sometimes git-lfs is our best friend, sometimes it's not. Sometimes a simple S3 bucket will be nice. And in many cases DVC could be cool at some point.   
 
 ### Simplicity, Automation, Collaboration, Security
-These four elements comes together when there is more than one person working on the same project. 
+These four elements comes together when there is more than one person working on the same project.  
 If the data is difficult to access, it will be hard to collaborate. 
-Collaboration comes with security concerns. 
+Collaboration comes with security concerns.   
 And bad automation will make things more complicated.
 Automation could be the source of secret leaks. 
 A good solution should be at the balance of these four elements.
