@@ -134,34 +134,316 @@ Sometimes we don't need to use any tools but well defined procedures. For exampl
 ## Describe the data with metadata
 The dataset is often not obvious to understand. For instance, say you use parquets to store data, and you have a parquet file with 100 columns. It's not easy to understand the data without any metadata. If you use a data warehouse like Snowflake or Delta Lake, you have easy access to the metadata of the data because they are built-in. But if you use a S3 bucket to store the data, you need to manage the metadata by yourself.   
 In the point of view of data engineering, the major metadata of the data is the schema of the data. In the point of view of data science, the major metadata of the data is the statistics of the data. From a business point of view, the metadata we want to see is a self-explanatory description of the data which matches the business logic. And in NLP, we may want to see the text normalization rules, the tokenization rules, etc. This is to say, the metadata is a complex set of information that varies from different perspectives and use cases. For me, we need to manage the metadata in a strucutred way, and we need to be able to access the metadata easily.   
+
 ### Accessibility of the metadata 
 The metadata should be positionned alongside the dataset. For databases, they are built-in. For more generic file systems like S3, we need to manage the metadata by ourselves. I would recommand formats that are easy to read and write, like JSON, YAML, or TOML, etc. This allows us to preview the metadata easily.   
-Sometimes an extract of the data is a good way to describe the data. It's a good idea to put an sample of the data alongside the dataset. We may not want to download the whole dataset to build a first impression of the data.   
+The reason to choose this kind of formats, is that we may want to use the metadata in the pipeline. For example, we may want to use the metadata to validate the data, or we may want to use the metadata to generate the documentation of the data. This requires the data to be in a structured format which can be easily parsed.   
+Sometimes an extract of the data is a good way to describe the data. It's a good idea to put an sample of the data alongside the dataset. We may not want to download the whole dataset to build a first impression of the data. And we can use the sample to explain the whole dataset and the pipeline to non technical people.
+
+### What to add to the metadata
 I have made a list of possible metadata that we may want to manage:
-  - Description
-  - Data source
-  - SHA1
-  - Schema
-  - Statistics
+  - Description: What is the data about?
+  - Data source: What's the upstream data source?
+  - SHA1: Useful to check data integrity
+  - Schema: Allows us to load the data easily
+  - Statistics: help us to handle the data (like missing values, etc.)
     - Number of rows
     - Number of columns
-  - Sample
-  - ETL pipeline stage 
+  - Sample: A sample of the data if the data is compatible with the format, otherwise you may want it to be in a separate file
+  - ETL pipeline stage: What's the current stage of the data in the pipeline?
   - Exectuion time of the pipeline 
   - Mapping between the columns and the business logic
-  
+
+Personally, there is always a rule of thumb to determine the complexity of something. That is, if someone new onboarding the project, how long will it take for him/her to understand the thing. The metadata here should be auto-representative not only for the data itself, but also for the pipeline or the code. 
+
 
 ## Example of HTML data for NLP with the Medallion Architecture
-We have talked about HTML data in the beginning of this article. Let's take a look at how we can manage the data with the Medallion Architecture. Let's assume that you want to build a system to categorize the HTML documents. The data source is a crawler that crawls the HTML documents from the Internet, at a rate of 1000 documents per day. The output of the crawler is a JSON file that contains the HTML documents stored in a S3 bucket.
+We have talked about HTML data in the beginning of this article. Let's take a look at how we can manage the data with the Medallion Architecture. Let's assume that you want to build a system to categorize the HTML documents. The data source is a crawler that crawls the HTML documents from the Internet, at a rate of 1000 documents per day. The output of the crawler is a JSON file that contains the HTML documents stored in a S3 bucket. 
+In this example, we will limit the tools to show the case in a restrained budget. So we only use git and S3 with MLFlow. All workflows run on ArgoWorkflow or Airflow.
+Let's name this project as `html-classification` and let's begin.
+### Pipeline
+The pipeline will be essentially something like this:
+![Data Pipeline Illustration](<pipeline overview.png>)
 
-### Bronze Layer
+### Architecture 
+The architecture is illustrated as below:
+![Data Architecture Illustration](<data management overview.png>)
 
-### Silver Layer
+### Overview of different layers
+#### The nomclature for the paths to the data in S3
+We are going to setup a bunch of rules since we are using S3 to store the data. We will use the following nomclature for the paths to the data in S3:
+```yaml
+s3://<bucket_name>/html-classification/<stage>/<date-of-data>/<dataset>
+```
 
-### Gold Layer
+#### Bronze Layer
+At this stage, the most direct input is the HTML documents collected by the crawler. It can be the output of an ingestion workflow that streams the documents from some message queue system to process it in a batch way. The output of the ingestion workflow is a JSON file that contains the HTML documents. As a personal preference, I use JSONL format to facilitate the reading in streaming mode.  
+The format looks like: 
+```Json
+# s3://<bucket_name>/html-classification/raw/2021-09-01/html-documents.json
+{"url": "https://www.example.com/giberish_html_?","html": "<html><body>...</body></html>","timestamp": "2021-09-01T00:00:00+09:00"}
+{"url": "https://www.example2.co/giberish_html_?","html": "<html><body>...</body></html>","timestamp": "2021-09-02T00:00:00+09:00"}
+...
+```
+Metadata:
+```yaml
+-
+Description: The raw HTML documents collected by the crawler. 
+Data source: The crawler
+Date of data creation: 2021-09-01
+workflow-name: crawler-to-s3
+SHA1: 8b8ae027744d2f920eb1aeee676d589957de40cc
+Schema: 
+  - url: string
+  - html: string
+  - timestamp: string
+Statistics:
+  - Number of rows: 1000
+  - Number of columns: 3
+Sample:
+  - url: "https://www.example.com/giberish_html_?"
+    html: "<html><body>...</body></html>"
+    timestamp: "2021-09-01T00:00:00+09:00"
+  - url: "https://www.example2.co/giberish_html_?"
+    html: "<html><body>...</body></html>"
+    timestamp: "2021-09-02T00:00:00+09:00"
+```
 
-### Post Model Layer
+#### Silver Layer
+At this stage, we begin to have some much more structured data.
 
-### Final architecture
+##### URL Normalization
+The first step is to normalize the URLs, with some simple deduplication with title (This is a rather arbitrary process as example only. In real life, the dedup should be much more complex and taking account more information. For example, the same page with different timestamps. We tend to keep the fresh copy). The output of this step will be like:
+```Json
+# s3://<bucket_name>/html-classification/preprocess/url-normalization/2021-09-02/html-documents.json
+{"url": "https://www.example.com","html": "<html><body>...</body></html>","timestamp": "2021-09-01T00:00:00+09:00"}
+{"url": "https://www.example2.com","html": "<html><body>...</body></html>","timestamp": "2021-09-02T00:00:00+09:00"}
+...
+```
+Metadata:
+```yaml
+-
+Description: The raw HTML documents collected by the crawler, with basic deduplication and normalization of the URLs.
+Data source: s3://<bucket_name>/html-classification/raw/2021-09-01/html-documents.json
+Date of data creation: 2021-09-02
+workflow-name: ingestion
+SHA1: da4eec8e1ffe93df6b8a768ac78d98b3879a5baa
+Schema: 
+  - url: string
+  - html: string
+  - timestamp: string
+Statistics:
+  - Number of rows: 998 # 2 duplicated rows removed
+  - Number of columns: 3
+Sample:
+  - url: "https://www.example.com"
+    html: "<html><body>...</body></html>"
+    timestamp: "2021-09-01T00:00:00+09:00"
+  - url: "https://www.example2.com"
+    html: "<html><body>...</body></html>"
+    timestamp: "2021-09-02T00:00:00+09:00"
+```
+This will allow us to have unique URLs for the same document, and the url can be used as the primary key of the data.
+
+##### HTML Parsing
+This time the format will be like:
+```Json
+# s3://<bucket_name>/html-classification/preprocess/html-parsing/2021-09-02/html-documents.json
+{"url": "https://www.example.com","title": "Example","content": "This is an example.","timestamp": "2021-09-01T00:00:00+09:00"}
+{"url": "https://www.example2.com","title": "Example2","content": "This is an example2.","timestamp": "2021-09-02T00:00:00+09:00"}
+...
+```
+Metadata:
+```yaml
+-
+Description: HTML documents with title and content extracted. 
+Data source: s3://<bucket_name>/html-classification/preprocess/url-normalization/2021-09-02/html-documents.json
+Date of data creation: 2021-09-02
+workflow-name: html-parsing
+SHA1: 8b8ae027744d2f920eb1aeee676d589957de40cc
+Schema: 
+  - url: string
+  - title: string
+  - content: string
+  - timestamp: string
+Statistics:
+  - Number of rows: 998 
+  - Number of columns: 4
+Sample:
+  - url: "https://www.example.com"
+    title: "Example"
+    content: "This is an example."
+    timestamp: "2021-09-01T00:00:00+09:00"
+  - url: "https://www.example2.com"
+    title: "Example2"
+    content: "This is an example2."
+    timestamp: "2021-09-02T00:00:00+09:00"
+```
+
+This is just an illustration format. To be more realistic, we may want to have more information like the metadata of the page, language of the document, the encoding of the document, etc. But hey, we can use some NLP tools to process the data. 
+
+##### Text Normalization
+Now we want to apply some text normalization rules to the content. The choice of the rules depends on the business requirements. For example, we may want to remove the stop words, remove the punctuation, remove the numbers, remove the special characters, etc. And this could make huge difference for the final performance of the model. In this example, we could have several different versions of the data with different text normalization rules. And the metadata should come in handy to help us to understand the data.
+###### Version 1
+```Json
+# s3://<bucket_name>/html-classification/preprocess/text-normalization/v1/2021-09-02/html-documents.json
+{"url": "https://www.example.com","title": "example","content": "this is an example.","timestamp": "2021-09-01T00:00:00+09:00"}
+{"url": "https://www.example2.com","title": "example2","content": "this is an example2.","timestamp": "2021-09-02T00:00:00+09:00"}
+...
+```
+Metadata:
+```yaml
+-
+Description: HTML documents with title and content extracted, and text normalization applied. 
+Data source: s3://<bucket_name>/html-classification/preprocess/html-parsing/2021-09-02/html-documents.json
+Date of data creation: 2021-09-03
+workflow-name: text-normalization-v1
+process: 
+  - remove punctuation
+  - remove special characters
+SHA1: 8b8ae027744d2f920eb1aeee676d589957de40cc
+Schema: 
+  - url: string
+  - title: string
+  - content: string
+  - timestamp: string
+Statistics:
+  - Number of rows: 998 
+  - Number of columns: 4
+Sample:
+  - url: "https://www.example.com"
+    title: "example"
+    content: "this is an example"
+    timestamp: "2021-09-01T00:00:00+09:00"
+  - url: "https://www.example2.com"
+    title: "example2"
+    content: "this is an example2"
+    timestamp: "2021-09-02T00:00:00+09:00"
+```
+###### Version 2
+```Json
+# s3://<bucket_name>/html-classification/preprocess/text-normalization/v2/2021-09-02/html-documents.json
+{"url": "https://www.example.com","title": "example","content": "this be an example.","timestamp": "2021-09-01T00:00:00+09:00"}
+{"url": "https://www.example2.com","title": "example2","content": "this be an example2.","timestamp": "2021-09-02T00:00:00+09:00"}
+...
+```
+Metadata:
+```yaml
+-
+Description: HTML documents with title and content extracted, and text normalization applied.
+Data source: s3://<bucket_name>/html-classification/preprocess/html-parsing/2021-09-02/html-documents.json
+Date of data creation: 2021-09-03
+workflow-name: text-normalization-v2
+process: 
+  - remove special characters
+  - verbe lematization
+SHA1: 8b8ae027744d2f920eb1aeee676d589957de40cc
+Schema: 
+  - url: string
+  - title: string
+  - content: string
+  - timestamp: string
+Statistics:
+  - Number of rows: 998 
+  - Number of columns: 4
+Sample:
+  - url: "https://www.example.com"
+    title: "example"
+    content: "this be an example."
+    timestamp: "2021-09-01T00:00:00+09:00"
+  - url: "https://www.example2.com"
+    title: "example2"
+    content: "this be an example2."
+    timestamp: "2021-09-02T00:00:00+09:00"
+```
+
+Now we have two versions of the data with different text normalization rules. We can use the metadata to understand the data. And we should be able to run model training with different versions of the data.
+
+#### Gold Layer
+Now we need to have the data ready for our final task: document categorization. We need to have the data in a format that is ready to use for the training and inference.  
+Now we have the basic text input, but we don't have the targets for supervised learning. Let's say we use an external paid API to get the targets. The output of the API is a JSON file that contains the targets. 
+```Json
+# s3://<bucket_name>/html-classification/annotated/2021-09-04/html-documents.json
+{"url": "https://www.example.com", "text": "example - this be an example.", "category": "entertainment", "timestamp": "2021-09-01T00:00:00+09:00"}
+{"url": "https://www.example2.com", "text": "example2 - this be an example2.", "category": "politics", "timestamp": "2021-09-02T00:00:00+09:00"}
+...
+```
+Metadata:
+```yaml
+-
+Description: HTML documents with title and content extracted, and text normalization applied, and targets added.
+Data source: 
+  - s3://<bucket_name>/html-classification/preprocess/text-normalization/v2/2021-09-03/html-documents.json # This allows us to trace the previous steps
+  - https://www.example.com/api/v1/document-categorization  # the api 
+Date of data creation: 2021-09-04
+workflow-name: annotation
+SHA1: 8b8ae027744d2f920eb1aeee676d589957de40cc
+Schema: 
+  - url: string
+  - title: string
+  - content: string
+  - category: string
+  - timestamp: string
+Statistics:
+  - Number of rows: 998 
+  - Number of columns: 5
+Sample:
+  - url: "https://www.example.com"
+    title: "example"
+    content: "this be an example."
+    category: "entertainment"
+    timestamp: "2021-09-01T00:00:00+09:00"
+  - url: "https://www.example2.com"
+    title: "example2"
+    content: "this be an example2."
+    category: "politics"
+    timestamp: "2021-09-02T00:00:00+09:00"
+``` 
+We use the v2 version of the data, and we add the targets to the data. Now we have the data ready for the training and inference.   
+When we train the model, we can push the metadata to MLFlow, as artifact or as parameter. This allows us to trace the data and the model.  
+
+#### Post Train Layer
+This is the step after the model training. We refine the data in this step with CleanLab. We try to rectify the mislabeled data and remove some outliers that are not related to the business. 
+```Json
+# s3://<bucket_name>/html-classification/post-train/2021-09-05/html-documents.json
+{"url": "https://www.example.com", "text": "example - this be an example.", "category": "entertainment", "timestamp": "2021-09-01T00:00:00+09:00"}
+{"url": "https://www.example2.com", "text": "example2 - this be an example2.", "category": "politics", "timestamp": "2021-09-02T00:00:00+09:00"}
+```
+Metadata:
+```yaml
+-
+Description: HTML documents with title and content extracted, and text normalization applied, and targets added, and mislabeled data removed.
+Data source: 
+  - s3://<bucket_name>/html-classification/preprocess/annotated/2021-09-04/html-documents.json # This allows us to trace the previous steps
+Date of data creation: 2021-09-05
+workflow-name: clean-lab
+SHA1: 8b8ae027744d2f920eb1aeee676d589957de40cc
+Schema: 
+  - url: string
+  - title: string
+  - content: string
+  - category: string
+  - timestamp: string
+Statistics:
+  - Number of rows: 900 # reduced a lot of bad data 
+  - Number of columns: 5
+Sample:
+  - url: "https://www.example.com"
+    title: "example"
+    content: "this be an example."
+    category: "entertainment"
+    timestamp: "2021-09-01T00:00:00+09:00"
+  - url: "https://www.example2.com"
+    title: "example2"
+    content: "this be an example2."
+    category: "politics"
+    timestamp: "2021-09-02T00:00:00+09:00"
+```
 
 ## Conclusion
+This is a very simple data management example. But it shows the basic idea of how to manage data in MLOps.  
+It's good to start with something simple and easy to understand. And then we can improve the data management incrementally.  
+We can begin with some naïve formats like JSONL, and then we can use more advanced formats like Parquet, Delta Table, etc. We can use some simple tools like plain S3FS or git-lfs, and then we can use more advanced tools like Neptune, Pachyderm, lakeFS, etc. We can use some simple workflow tools like Argo Workflow, and then we can use more advanced tools like Airflow, Dagster, etc.   
+We can also use MLFlow to track the data we used for the training.    
+
+For me, the most important thing is to be able to track the data the clean way to allow us to acheive the goals we mentioned in the beginning of this article. This example showed we can do it with some simple tools. Minio can help us control the access, the metadata can help us understand the data, and the workflow tools can help us to manage the pipeline. And all this with a restrained budget. 
