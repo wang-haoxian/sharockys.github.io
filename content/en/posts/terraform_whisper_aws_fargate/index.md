@@ -19,7 +19,8 @@ tags:
 ---
 
 ## Introduction  
-Whisper is a STT (Speech to Text) model developed by [OPENAI](https://openai.com/research/whisper). It's a powerful model that can convert human speech into text. Friend of mine encoutered this project as an job interview task with IaC using Terraform so I get the idea to do it on my own and I find it interesting to deploy it on AWS Fargate. I chose Fargate because of the highly optimized version of it doesn't require GPUs. In this post, I will share my journey to this final solution and show you how to deploy it.
+Whisper is a STT (Speech to Text) model developed by [OPENAI](https://openai.com/research/whisper). It's a powerful model that can convert human speech into text. Friend of mine encoutered this project as an job interview task with IaC using Terraform so I get the idea to do it on my own and I find it interesting to deploy it on AWS Fargate. I chose Fargate because of the highly optimized version of it doesn't require GPUs. In this post, I will share my journey to this final solution and show you how to deploy it.   
+All the code is available on [Github](https://github.com/sharockys/whisper-terraform-aws-Fargate) and you can use it to deploy the model on your own AWS account.
 
 ## Prerequisites 
 - AWS CLI configured
@@ -135,4 +136,148 @@ We can expect three parts in the deployment:
 - The infrastructure part: The infrastructure of code and CI/CD pipeline. This part is rather static and normally in the organization, it's managed by the DevOps team or the Infra team. And it's not the main part of the task and not necessary to be done with AWS. It can be Github Actions, Gitlab CI, Jenkins, etc.
 - The model serving part: The model is served by the Fargate and the ECS. We can use the ECS to scale the model.
 
-TO BE CONTINUED
+## Python Implementation
+### Development details
+
+- Python Project management: Poetry
+
+- Model Framework: CTranslate2 for faster-whisper 
+
+- Model size: Base 
+
+- API Framework: FastAPI with Swagger UI and OpenAPI support 
+
+- Model is downloaded when the web server is loaded (Not the best practice)
+- An endpoint `/transcribe` for transcription  
+- A health check `/healthz` is exposed for healthcheck ( for the sake of time, no model status check is implemented in this version)  it’s just a hook to see if the server responds  
+
+- A dockerfile with docker-compose is created for building the image. And to launch it easily without typing long commands for dev purpose. 
+
+- The docker compose file has limited CPU and memory to help with resources provisioning 
+
+- .gitignore and .dockerignore are added for not including unwanted files in docker building process or in git.   
+
+- The repo coexists with terraform codes, in reality they should be either separated or as submodules.   
+
+- Formatting and linting:    
+  - Black 
+  - Pylint 
+  - MyPy 
+  - isort 
+
+- Pydantic is used to make schemes for the API 
+
+- A makefile is created for handy commands for testing 
+
+
+## Terraform Implementation 
+I have no previous experience on terraform except several runs with the official tutorials. I learnt during the project. To begin with, I took 
+[GitHub - kayvane1/terraform-aws-huggingface-deploy](https://github.com/kayvane1/terraform-aws-huggingface-deploy/tree/master)
+to get inspired. ChatGPT was used to help me understand quickly the syntax and make sample codes based on my needs, but mostly I use the official documentation.
+
+### Terraform cloud
+In this project I use terraform cloud all the time to simulate an env for collaboration as team (shared secrets, states, etc) It could be S3 backend or whatever backend supported by Terraform 
+
+### Development details 
+#### Boostrap
+
+The project is modularized to four modules, instead of just a file. 
+
+I consider this part as basic infrastructure that is used around the whole infrastructure. It should be easily tested one by one. 
+
+there are four modules: 
+1. Code Commit 
+2. Code Build 
+3. ECR 
+4. IAM (to be put on corresponding modules instead of being an independent module) 
+
+#### App Deployment
+
+In contrary to the bootstrap part, I think this part is much more exclusive to the app. So I put every components in a single `ecs` module with alb.tf, [main.tf](http://main.tf), etc. 
+
+
+#### Resources Estimation
+
+Based on the local runs, I begin with 
+
+##### Take 1
+
+- 2 CPUs + 4GB
+- In fact only 65 of 2 CPU and 11% of RAM was used
+    
+    ![CPU and memory consumption of take1](take1.png)
+    
+- So reduced to 1 CPU + 2GB but it’s not sufficient can caused the service to stop
+
+##### Take2
+
+- 1 CPU + 2GB 
+
+![CPU and memory consumption of take1](take2.png)
+
+- This cause the container to be killed often 
+
+##### Final choice
+
+- 2 CPU + 4 GB of RAM should be ok but we need further stress test 
+
+##### ALB strategy   
+I use ALB's target group for autoscaling the service. The desired number was set to 3 and be able to scale to 0. The minimum health percent of app was set to 50 to trigger the scale in.  
+
+## Thoughts on potential improvements 
+### Security
+
+- https (even for internal communication - zero trust) + dedicated domain name (if exposed to the internet, if it’s called by enduser’s PC, not sure what the users look like) + with IP whitelist to improve security
+- dev/stage/prod env separation
+- Finer grain RBAC
+
+### Scalability
+
+- Automatic Target Weights (ATW) → weighted lb. Combine different strategies with metrics to make the scaling efficiently or Least outstanding requests
+- stress test
+- Over-Provisioning
+- Fine-Tune threshold for scaling based on metrics
+- Rate Limit in app
+- Queuing
+
+### Efficiency
+
+- Improve configurability with more tf variables instead of hardcoded ones
+- Cache for Code Build
+- tag commit for code build and tag image (versioning of images), make two pipelines one for dev CI another for publish based on branch/tag system
+- region - I picked randomly
+- triggers
+    - Fargate deploy refresh should be triggered in pipeline once the prod build is done
+    - Code commit should trigger code pipeline automatically with push/merge to main
+- systematically use tags
+
+### Functionality
+
+- Is Terraform cloud the standard usage of Doctolib? Maybe just with S3 backend
+- better log/ monitoring
+- EFS for models
+
+### Viability
+
+- health check container → the health check is oversimplified
+- The model is downloaded from HFhub which is an external service, and if it fails, the service fails. So the model file should be persistent to S3 or add to the image.
+- P-99 TM-99
+
+### Housekeeping
+
+- aws_ecr_lifecycle_policy for clean up old images that are not in use
+
+### Cost Agnostic
+
+- cost Optim
+
+### Fallback
+
+- Use AWS TTS as a fallback plan
+
+
+## In the end  
+This is what I have done in this short-term project. I will continue to improve the project and I will be happy to hear your feedback. 
+
+
+
