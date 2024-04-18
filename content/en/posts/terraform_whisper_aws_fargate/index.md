@@ -20,7 +20,7 @@ tags:
 
 ## Introduction  
 Whisper is a STT (Speech to Text) model developed by [OPENAI](https://openai.com/research/whisper). It's a powerful model that can convert human speech into text. Friend of mine encoutered this project as an job interview task with IaC using Terraform so I get the idea to do it on my own and I find it interesting to deploy it on AWS Fargate. I chose Fargate because of the highly optimized version of it doesn't require GPUs. In this post, I will share my journey to this final solution and show you how to deploy it.   
-All the code is available on [Github](https://github.com/sharockys/whisper-terraform-aws-Fargate) and you can use it to deploy the model on your own AWS account.
+All the code is available on [Github](https://github.com/wang-haoxian/whisper-terraform-aws-Fargate) and you can use it to deploy the model on your own AWS account.
 
 ## Prerequisites 
 - AWS CLI configured
