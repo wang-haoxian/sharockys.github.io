@@ -284,7 +284,7 @@ docker run --runtime=nvidia -p 8000:80 hf_serve
 In this article, I showed how to use the `transformers` library to serve a HF Pipeline with Starlette and FastAPI.    
 FastAPI is not always the best option. It depends on the use case. Since it's widely used, it's a good option to learn.  
 If you are curious about the performance, you can check the [benchmark](https://web-frameworks-benchmark.netlify.app/result?l=python).  
-In this benchmark, Starlette is way faster than FastAPI with almost 40% of difference.   
+In this benchmark, Starlette is way faster than FastAPI with almost 40% of difference. (Later on, I cheked on the FastAPI's doc and find out that FastAPI is fully compatible with (and based on) Starlette.)
 It would be also interesting to see how the performance changes with the number of requests.In the next article, I will use [Locust](https://github.com/locustio/locust) to benchmark the performance of the web server with the pipeline. 
 I want to see also how torchserve can improve the performance compared to these two web servers.  
 Then let's see how LRU cache/ Redis can improve the performance of server load in a next article.
