@@ -151,7 +151,7 @@ There are several things to note:
 - the `<>` is used to indicate the task and constraints. Some may prefer [] but I found that <> is more effective.  
 - the contraints are important. It's better to have them in the prompt. And the contraints should be clear and easy to understand. 
 - the examples are important. This makes the few-shot prompting. They help the model to understand the task and the constraints. It's crucial to have the corresponding examples for each language pair and it will be the future improvement of the prompt.
-- the output should be in a json format. It's easy to process the output in a programmatic way.  
+- the output should be in a json format. It's easy to process the output in a programmatic way. I used pydantic to validate the output.
 
 ## The document processing strategy  
 The HTML document contains a lot of house-baked tags, which are not easy to process. After some trails, I converted the HTML to a json format. This allows us to keep the structure of the document and to process the text easily. 
