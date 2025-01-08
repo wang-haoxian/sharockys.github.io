@@ -1,8 +1,8 @@
 ---
 author: "Haoxian WANG"
-title: "[K8S] Use K3D and Devtron to implement the first service"
+title: "[K8S] Use K3D to implement the first service"
 date: 2023-03-11T11:00:06+09:00
-description: "Deploy the easiest example of k8s using K3D and Devtron"
+description: "Deploy the easiest example of k8s using K3D"
 draft: false
 hideToc: false
 enableToc: true
@@ -11,14 +11,13 @@ author: Haoxian
 authorEmoji: 👻
 tags: 
 - K3D
-- Devtron
 - K8S
 - Kubernetes 
 - Docker
 ---
 
 ## Get your hands dirty with K3D 
-Now that we have a running cluster creating by K3D and a Devtron running as our controlplane, it's time to make our very first service.   
+Now that we have a running cluster creating by K3D, it's time to make our very first service.   
 The example that I chosen was from https://github.com/nigelpoulton/k8s-sample-apps (A more PC example can be found from https://kubernetes.io/docs/tutorials/stateless-application/guestbook/)
 This repo proposed several example apps, and this is the simplest one. 
 
@@ -334,7 +333,7 @@ With K3D, we have two ways to expose the service: via ingress and via Nodeport.
 At the following part, I will show you how to expose the service in K3D. 
 
 ### Using NodePort 
-If you have read my previous blog for setting up Devtron, then you will be able to see how easy it's to use NodePort to expose the service. 
+The simplest way to expose the service is to use NodePort.
 If you don't have the port mapping for the K3D Loadbalancer, then you can add a port for it. 
 Suppose that you don't have 8082 which is the port you want for your app. You can add the port mapping with 
 ```shell
