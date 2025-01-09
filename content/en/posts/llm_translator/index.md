@@ -229,7 +229,7 @@ At the begining, I asked help from my friend to use his GPU but the latency was 
 ### The tech stack - with Kubernetes
 - Argo Workflow for the translation job running
 - Ollama for the model serving (External service)
-- LiteLLM as model as LLM Gateway (proxy)
+- LiteLLM as models Gateway (proxy)
 - MongoDB for the document storage 
 - Langfuse for LLM calls tracing
 - Prometheus for the monitoring of the job
