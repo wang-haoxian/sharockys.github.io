@@ -96,9 +96,9 @@ Based on the results of the direct translation in the first step and the problem
 <Meaning-Based Translation> 
 ```
 
-This prompt gives us a good start. These steps are expensive together. And there is a bug in the workflow: the step 1 's output is not used in the following steps. 
+This prompt gives us a good start. These steps are expensive together. And there is a bug in the workflow: the step 1 's output is not used in the following steps. Aside from the cost issue, after several trials, I found this prompt doesn't work well for my task, the translation is not accurate and the output is not readable.
 
-I also tried to make it with Chain of Thought. The result is not good and it is no longer deterministic in terms of translation quality and formatting for our task.
+I also tried to make it with Chain of Thought. I asked the model to make a plan for the translation to simulate these steps. The result is not good and it is no longer deterministic in terms of translation quality and formatting for our task without adding a lot of overhead on the length of the prompt and the inference time. 
 
 ### My prompt
 After several trials with ChatGPT and local LMs with LM Studio, I found that the following prompt is enough for my task. 
